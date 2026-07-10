@@ -1,0 +1,7 @@
+{
+  "hotkey": "<ctrl>+<space>",
+  "language": "bn-BD",
+  "fallback_clipboard": true,
+  "websocket_port": 8765,
+  "auto_punctuation": false
+}

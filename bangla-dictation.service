@@ -1,0 +1,13 @@
+[Unit]
+Description=Bangla Dictation Daemon
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=/home/hralamin/bangla-dictation
+ExecStart=/usr/bin/sg input -c '/home/hralamin/bangla-dictation/venv/bin/python app.py'
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=default.target
