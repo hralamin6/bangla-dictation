@@ -1,56 +1,76 @@
-# Bangla Dictation (Linux Daemon)
+# Bangla Dictation & AI API Server (Linux)
 
-A lightweight, headless background service for Ubuntu/Pop!_OS that enables global press-and-hold dictation. It uses a hidden instance of Google Chrome to process voice using the Web Speech API and injects the transcribed text directly into your active cursor using native Linux input events (`evdev` and `ydotool`).
+A lightweight, headless background service for Ubuntu/Pop!_OS that provides **Global Dictation Hotkeys** and a **Local OpenAI-Compatible API Server** for advanced Speech-to-Text (STT) and Text-to-Speech (TTS).
 
 ## Features
-- **Invisible**: Runs completely silently in the background with zero GUI overhead.
-- **Wayland Native**: Fully compatible with Wayland (and X11) through raw `uinput` interception.
-- **Dual Language**:
-  - `Hold Right Ctrl` ➔ English Dictation (Types using `ydotool` without touching clipboard)
-  - `Hold Right Ctrl + Right Alt` ➔ Bangla Dictation (Types using `wl-clipboard` and `evdev` to inject Unicode)
-- **True Handy-style**: Starts listening instantly on key press, types the moment you release the keys.
+
+1. **Global Dictation**
+   - Press and hold `Right Ctrl` ➔ English Dictation
+   - Press and hold `Right Ctrl + Right Alt` ➔ Bangla Dictation
+   - Injects transcribed text instantly across Wayland/X11 directly into your cursor.
+
+2. **OpenAI-Compatible API (Local Server)**
+   - Exposes `http://localhost:8767/v1/audio/transcriptions` for processing pre-recorded MP3/WAV files.
+   - Exposes `http://localhost:8767/v1/audio/speech` for generating high-quality Edge TTS audio.
+   - Drop-in replacement for any app that uses OpenAI's API.
+
+3. **High-Quality Neural TTS**
+   - Supports 4 beautiful Bengali Neural Voices powered by Microsoft Edge.
+   - Global Hotkey: Highlight text, copy (`Ctrl+C`), and press `Left Ctrl + Right Ctrl` to read it out loud.
 
 ## Installation
 
-Run the installation script to grab dependencies and create the python virtual environment:
+Run the installation script to grab dependencies and create the python virtual environment. **It will ask you if you want the Full Experience (Hotkeys + API) or just the API Server (lower memory, no hotkeys).**
+
 ```bash
 ./install.sh
 ```
 
-**Important**: You *must* add your user to the `input` group so the script can monitor hotkeys without root:
+**Important for Hotkey Mode**: You *must* add your user to the `input` group so the script can monitor hotkeys:
 ```bash
 sudo usermod -aG input $USER
 ```
-*Note: You must log out and log back in for this group change to take effect.*
-
-## How to run (Manually)
-
-Since the script needs `input` group permissions, if you haven't logged out yet, you can run it via `sg`:
-```bash
-sg input -c "./venv/bin/python app.py"
-```
-Or, if you have rebooted/logged back in, simply:
-```bash
-./venv/bin/python app.py
-```
+*(You must log out and log back in for this group change to take effect).*
 
 ## How to run (Autostart on Boot)
 
-To have the daemon automatically start silently in the background every time you turn on your computer:
+To have the daemon automatically start silently every time you turn on your computer:
 
-1. Copy the systemd service to your user directory:
 ```bash
 mkdir -p ~/.config/systemd/user/
 cp bangla-dictation.service ~/.config/systemd/user/
-```
-
-2. Enable and start it:
-```bash
 systemctl --user daemon-reload
 systemctl --user enable --now bangla-dictation.service
 ```
 
-3. Check if it's running:
+## API Documentation (Port 8767)
+
+### Text-To-Speech (TTS)
+Generate high-quality Bengali or English audio from text.
+
 ```bash
-systemctl --user status bangla-dictation.service
+curl http://localhost:8767/v1/audio/speech \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "tts-1",
+    "input": "হ্যালো, আমি একটি এপিআই থেকে কথা বলছি!",
+    "voice": "alloy",
+    "speed": 1.0
+  }' --output test.mp3
+```
+
+**Supported Voices:**
+- `"alloy"` ➔ `bn-BD-PradeepNeural` (Bangla Male BD)
+- `"nova"` ➔ `bn-BD-NabanitaNeural` (Bangla Female BD)
+- `"echo"` ➔ `bn-IN-BashkarNeural` (Bangla Male IN)
+- `"shimmer"` ➔ `bn-IN-TanishaaNeural` (Bangla Female IN)
+
+### Speech-To-Text (STT)
+Transcribe pre-recorded audio files (`.mp3`, `.wav`, `.m4a`) into text.
+
+```bash
+curl http://localhost:8767/v1/audio/transcriptions \
+  -F file="@/path/to/test.mp3" \
+  -F model="whisper-1" \
+  -F language="bn"
 ```

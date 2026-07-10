@@ -1,2 +1,4 @@
 websockets
 evdev
+edge-tts
+SpeechRecognition

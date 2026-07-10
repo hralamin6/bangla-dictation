@@ -28,11 +28,14 @@ async def handler(websocket, path=None):
         logger.info("Browser disconnected")
 
 async def send_command(command: str):
+    await send_payload({"command": command})
+
+async def send_payload(payload: dict):
     if CLIENTS:
-        message = json.dumps({"command": command})
+        message = json.dumps(payload)
         await asyncio.gather(*[client.send(message) for client in CLIENTS])
     else:
-        logger.warning("No browser connected to receive command")
+        logger.warning("No browser connected to receive payload")
 
 async def _run_server(port):
     async with websockets.serve(handler, "localhost", port):
