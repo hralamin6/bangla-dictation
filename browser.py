@@ -284,16 +284,11 @@ def launch_browser(config):
                     kwargs = {"model": model, "messages": messages}
                     if image_bytes:
                         kwargs["image"] = image_bytes
-                        if not provider_name:
-                            provider_name = "PollinationsAI"
                         
                     if provider_name:
                         import g4f
                         from g4f.Provider import ProviderUtils
                         
-                        if provider_name.lower() == "pollinationsai":
-                            kwargs["model"] = "openai"
-                            
                         provider_class = None
                         # Case-insensitive provider search using g4f's internal map
                         for name in ProviderUtils.convert.keys():
