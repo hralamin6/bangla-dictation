@@ -43,6 +43,16 @@ systemctl --user daemon-reload
 systemctl --user enable --now bangla-dictation.service
 ```
 
+## Updating / Upgrading
+
+If you want to pull the latest features and bug fixes from GitHub, make sure you update your python dependencies afterwards:
+
+```bash
+git pull origin main
+./venv/bin/pip install -r requirements.txt
+systemctl --user restart bangla-dictation.service
+```
+
 ## API Documentation (Port 8767)
 
 ### Text-To-Speech (TTS)
