@@ -18,17 +18,32 @@ def launch_browser(config):
         def generate_edge_tts(self, text, voice, speed=1.0):
             import subprocess
             import os
+            import re
             
-            # Map standard OpenAI voices to Microsoft Edge Neural Bangla voices
-            voice_map = {
-                'alloy': 'bn-BD-PradeepNeural',     # Male BD (Default)
-                'nova': 'bn-BD-NabanitaNeural',     # Female BD
-                'echo': 'bn-IN-BashkarNeural',      # Male IN
-                'shimmer': 'bn-IN-TanishaaNeural',  # Female IN
-                'fable': 'en-US-GuyNeural',         # English Male
-                'onyx': 'en-US-AriaNeural'          # English Female
-            }
-            edge_voice = voice_map.get(voice, 'bn-BD-PradeepNeural')
+            # Auto-detect language by checking for Bengali characters
+            is_bangla = bool(re.search(r'[\u0980-\u09FF]', text))
+            
+            # Map standard OpenAI voices to Microsoft Edge Neural voices
+            if is_bangla:
+                voice_map = {
+                    'alloy': 'bn-BD-PradeepNeural',     # Male BD (Default)
+                    'nova': 'bn-BD-NabanitaNeural',     # Female BD
+                    'echo': 'bn-IN-BashkarNeural',      # Male IN
+                    'shimmer': 'bn-IN-TanishaaNeural',  # Female IN
+                    'fable': 'en-US-GuyNeural',
+                    'onyx': 'en-US-AriaNeural'
+                }
+            else:
+                voice_map = {
+                    'alloy': 'en-US-AriaNeural',        # Female EN (Default)
+                    'nova': 'en-US-JennyNeural',        # Female EN
+                    'echo': 'en-US-GuyNeural',          # Male EN
+                    'shimmer': 'en-US-ChristopherNeural',# Male EN
+                    'fable': 'en-US-GuyNeural',
+                    'onyx': 'en-US-AriaNeural'
+                }
+                
+            edge_voice = voice_map.get(voice, 'bn-BD-PradeepNeural' if is_bangla else 'en-US-AriaNeural')
             
             # Convert OpenAI speed multiplier (0.25 to 4.0) to Edge TTS percentage
             rate_pct = int((speed - 1.0) * 100)
@@ -227,7 +242,40 @@ def launch_browser(config):
                         else:
                             raise ValueError(f"Provider not found: {provider_name}")
                         
+                    stream = data.get('stream', False)
+                    kwargs["stream"] = stream
+                        
                     response = client.chat.completions.create(**kwargs)
+                    
+                    if stream:
+                        self.send_response(200)
+                        self.send_header('Content-Type', 'text/event-stream; charset=utf-8')
+                        self.send_header('Cache-Control', 'no-cache')
+                        self.send_header('Connection', 'keep-alive')
+                        self.end_headers()
+                        
+                        for chunk in response:
+                            content = chunk.choices[0].delta.content if hasattr(chunk, 'choices') and chunk.choices else None
+                            if content is not None:
+                                chunk_data = {
+                                    "id": f"chatcmpl-{int(time.time())}",
+                                    "object": "chat.completion.chunk",
+                                    "created": int(time.time()),
+                                    "model": model,
+                                    "choices": [
+                                        {
+                                            "index": 0,
+                                            "delta": {"content": content},
+                                            "finish_reason": None
+                                        }
+                                    ]
+                                }
+                                self.wfile.write(f"data: {json.dumps(chunk_data, ensure_ascii=False)}\n\n".encode('utf-8'))
+                                self.wfile.flush()
+                                
+                        self.wfile.write(b"data: [DONE]\n\n")
+                        self.wfile.flush()
+                        return
                     
                     content = response.choices[0].message.content if hasattr(response, 'choices') else str(response)
                     
@@ -273,6 +321,7 @@ def launch_browser(config):
                     data = json.loads(post_data.decode('utf-8'))
                     prompt = data.get('prompt', '')
                     model = data.get('model', 'flux')
+                    response_format = data.get('response_format', 'b64_json')
                     
                     if not prompt:
                         raise ValueError("Prompt is required")
@@ -281,15 +330,18 @@ def launch_browser(config):
                     response = client.images.generate(
                         model=model,
                         prompt=prompt,
-                        response_format="url"
+                        response_format=response_format
                     )
                     
-                    image_url = response.data[0].url
+                    if response_format == 'b64_json':
+                        image_data = {"b64_json": response.data[0].b64_json}
+                    else:
+                        image_data = {"url": response.data[0].url}
                     
                     openai_format = {
                         "created": int(time.time()),
                         "data": [
-                            {"url": image_url}
+                            image_data
                         ]
                     }
                     

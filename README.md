@@ -55,8 +55,61 @@ systemctl --user restart bangla-dictation.service
 
 ## API Documentation (Port 8767)
 
+### Chat Completions (LLM Text Generation)
+Generate text using powerful LLMs (GPT-4o) completely for free by hijacking web interfaces using the integrated `g4f` engine. 
+
+**Features:**
+- Supports full Server-Sent Events (SSE) streaming by passing `"stream": true`!
+- Automatically routes to the best free web provider (just omit the `"provider"` field).
+
+```bash
+curl http://localhost:8767/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "gpt-4o",
+    "stream": true,
+    "messages": [
+      {"role": "system", "content": "You are a helpful assistant."},
+      {"role": "user", "content": "আমাকে বাংলা ভাষা সম্পর্কে কিছু বলুন।"}
+    ]
+  }'
+```
+
+### Image Generation (Text to Image)
+Generate beautiful images completely for free using the ultra-fast Flux AI model.
+
+**Features:**
+- Defaults to returning standard `"b64_json"` (base64 string) just like OpenAI.
+- If you prefer a direct link, pass `"response_format": "url"`.
+
+```bash
+curl http://localhost:8767/v1/images/generations \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "flux",
+    "response_format": "url",
+    "prompt": "একটি সুন্দর বাংলাদেশী গ্রামের ছবি, ডিজিটাল আর্ট"
+  }'
+```
+
+### Speech-To-Text (STT)
+Transcribe pre-recorded audio files (`.mp3`, `.wav`, `.m4a`) into text. Powered by Google Cloud Speech (no API key needed).
+
+**Features:**
+- The `language` field defaults to `"bn-BD"` (Bengali) if omitted. You can pass `"en"` for English.
+
+```bash
+curl http://localhost:8767/v1/audio/transcriptions \
+  -F file="@/path/to/test.mp3" \
+  -F model="whisper-1" \
+  -F language="bn"
+```
+
 ### Text-To-Speech (TTS)
-Generate high-quality Bengali or English audio from text.
+Generate high-quality audio from text using Microsoft Edge Neural voices.
+
+**Features:**
+- The engine **automatically detects** if your text is Bengali or English and routes it to the appropriate regional native speaker!
 
 ```bash
 curl http://localhost:8767/v1/audio/speech \
@@ -67,51 +120,6 @@ curl http://localhost:8767/v1/audio/speech \
     "voice": "alloy",
     "speed": 1.0
   }' --output test.mp3
-```
-
-**Supported Voices:**
-- `"alloy"` ➔ `bn-BD-PradeepNeural` (Bangla Male BD)
-- `"nova"` ➔ `bn-BD-NabanitaNeural` (Bangla Female BD)
-- `"echo"` ➔ `bn-IN-BashkarNeural` (Bangla Male IN)
-- `"shimmer"` ➔ `bn-IN-TanishaaNeural` (Bangla Female IN)
-
-### Speech-To-Text (STT)
-Transcribe pre-recorded audio files (`.mp3`, `.wav`, `.m4a`) into text.
-
-```bash
-curl http://localhost:8767/v1/audio/transcriptions \
-  -F file="@/path/to/test.mp3" \
-  -F model="whisper-1" \
-  -F language="bn"
-```
-
-### Chat Completions (LLM Text Generation)
-Generate text using powerful LLMs (GPT-4o, Claude 3) completely for free by hijacking web interfaces using the integrated `g4f` engine. 
-
-```bash
-curl http://localhost:8767/v1/chat/completions \
-  -H "Content-Type: application/json" \
-  -d '{
-    "model": "gpt-4o",
-    "provider": "PollinationsAI",
-    "messages": [
-      {"role": "system", "content": "You are a helpful assistant."},
-      {"role": "user", "content": "আমাকে বাংলা ভাষা সম্পর্কে কিছু বলুন।"}
-    ]
-  }'
-```
-*Note: You can omit the `"provider"` field to let the API automatically route to the best working provider.*
-
-### Image Generation (Text to Image)
-Generate beautiful images completely for free using the ultra-fast Flux AI model.
-
-```bash
-curl http://localhost:8767/v1/images/generations \
-  -H "Content-Type: application/json" \
-  -d '{
-    "model": "flux",
-    "prompt": "একটি সুন্দর বাংলাদেশী গ্রামের ছবি, ডিজিটাল আর্ট"
-  }'
 ```
 
 ### List Available Models & Providers
