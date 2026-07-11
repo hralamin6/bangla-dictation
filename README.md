@@ -74,3 +74,27 @@ curl http://localhost:8767/v1/audio/transcriptions \
   -F model="whisper-1" \
   -F language="bn"
 ```
+
+### Chat Completions (LLM Text Generation)
+Generate text using powerful LLMs (GPT-4o, Claude 3) completely for free by hijacking web interfaces using the integrated `g4f` engine. 
+
+```bash
+curl http://localhost:8767/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "gpt-4o",
+    "provider": "PollinationsAI",
+    "messages": [
+      {"role": "system", "content": "You are a helpful assistant."},
+      {"role": "user", "content": "আমাকে বাংলা ভাষা সম্পর্কে কিছু বলুন।"}
+    ]
+  }'
+```
+*Note: You can omit the `"provider"` field to let the API automatically route to the best working provider.*
+
+### List Available Models & Providers
+See exactly which LLM models and Free Web Providers you can manually select from.
+
+```bash
+curl http://localhost:8767/v1/models
+```

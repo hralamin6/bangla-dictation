@@ -2,3 +2,5 @@ websockets
 evdev
 edge-tts
 SpeechRecognition
+g4f
+curl_cffi

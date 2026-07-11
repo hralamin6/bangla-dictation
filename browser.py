@@ -69,6 +69,32 @@ def launch_browser(config):
                     logger.error(f"TTS Proxy error: {e}")
                     self.send_response(500)
                     self.end_headers()
+            elif self.path == '/v1/models':
+                import json
+                
+                # Only list models that work reliably without auth in g4f 7.8.2
+                models = [
+                    "gpt-4o", "gpt-4"
+                ]
+                
+                providers = [
+                    "Cloudflare", "Copilot", "DeepInfra", "EasyChat", 
+                    "Felo", "PollinationsAI", "Yqcloud"
+                ]
+                
+                data = [{"id": m, "object": "model", "owned_by": "g4f-model"} for m in models]
+                data.append({"id": "---AVAILABLE-PROVIDERS---", "object": "model", "owned_by": "info"})
+                data.extend([{"id": p, "object": "provider", "owned_by": "g4f-provider"} for p in providers])
+                
+                response = {
+                    "object": "list",
+                    "data": data
+                }
+                
+                self.send_response(200)
+                self.send_header('Content-Type', 'application/json; charset=utf-8')
+                self.end_headers()
+                self.wfile.write(json.dumps(response).encode('utf-8'))
             else:
                 super().do_GET()
                 
@@ -164,6 +190,71 @@ def launch_browser(config):
                     self.wfile.write(b'{"text": ""}')
                 except Exception as e:
                     logger.error(f"OpenAI API STT error: {e}")
+                    self.send_response(500)
+                    self.end_headers()
+                    self.wfile.write(b'{"error": "Internal Server Error"}')
+            elif self.path == '/v1/chat/completions':
+                content_length = int(self.headers['Content-Length'])
+                post_data = self.rfile.read(content_length)
+                
+                try:
+                    import json
+                    import time
+                    from g4f.client import Client
+                    
+                    data = json.loads(post_data.decode('utf-8'))
+                    model = data.get('model', 'gpt-4o')
+                    provider_name = data.get('provider', None)
+                    messages = data.get('messages', [])
+                    
+                    client = Client()
+                    kwargs = {"model": model, "messages": messages}
+                    if provider_name:
+                        import g4f
+                        from g4f.Provider import ProviderUtils
+                        provider_class = None
+                        # Case-insensitive provider search using g4f's internal map
+                        for name in ProviderUtils.convert.keys():
+                            if name.lower() == provider_name.lower():
+                                provider_class = ProviderUtils.convert[name]
+                                break
+                                
+                        if provider_class:
+                            kwargs["provider"] = provider_class
+                        else:
+                            raise ValueError(f"Provider not found: {provider_name}")
+                        
+                    response = client.chat.completions.create(**kwargs)
+                    
+                    content = response.choices[0].message.content if hasattr(response, 'choices') else str(response)
+                    
+                    openai_format = {
+                        "id": f"chatcmpl-{int(time.time())}",
+                        "object": "chat.completion",
+                        "created": int(time.time()),
+                        "model": model,
+                        "choices": [{
+                            "index": 0,
+                            "message": {
+                                "role": "assistant",
+                                "content": content,
+                            },
+                            "finish_reason": "stop"
+                        }],
+                        "usage": {
+                            "prompt_tokens": 0,
+                            "completion_tokens": 0,
+                            "total_tokens": 0
+                        }
+                    }
+                    
+                    self.send_response(200)
+                    self.send_header('Content-Type', 'application/json; charset=utf-8')
+                    self.end_headers()
+                    self.wfile.write(json.dumps(openai_format, ensure_ascii=False).encode('utf-8'))
+                    
+                except Exception as e:
+                    logger.error(f"OpenAI API Chat error: {e}")
                     self.send_response(500)
                     self.end_headers()
                     self.wfile.write(b'{"error": "Internal Server Error"}')
