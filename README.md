@@ -92,6 +92,18 @@ curl http://localhost:8767/v1/chat/completions \
 ```
 *Note: You can omit the `"provider"` field to let the API automatically route to the best working provider.*
 
+### Image Generation (Text to Image)
+Generate beautiful images completely for free using the ultra-fast Flux AI model.
+
+```bash
+curl http://localhost:8767/v1/images/generations \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "flux",
+    "prompt": "একটি সুন্দর বাংলাদেশী গ্রামের ছবি, ডিজিটাল আর্ট"
+  }'
+```
+
 ### List Available Models & Providers
 See exactly which LLM models and Free Web Providers you can manually select from.
 

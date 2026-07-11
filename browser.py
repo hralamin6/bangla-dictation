@@ -74,7 +74,7 @@ def launch_browser(config):
                 
                 # Only list models that work reliably without auth in g4f 7.8.2
                 models = [
-                    "gpt-4o", "gpt-4"
+                    "gpt-4o", "gpt-4", "flux", "dall-e-3"
                 ]
                 
                 providers = [
@@ -255,6 +255,48 @@ def launch_browser(config):
                     
                 except Exception as e:
                     logger.error(f"OpenAI API Chat error: {e}")
+                    self.send_response(500)
+                    self.end_headers()
+                    self.wfile.write(b'{"error": "Internal Server Error"}')
+            elif self.path == '/v1/images/generations':
+                content_length = int(self.headers['Content-Length'])
+                post_data = self.rfile.read(content_length)
+                
+                try:
+                    import json
+                    import time
+                    from g4f.client import Client
+                    
+                    data = json.loads(post_data.decode('utf-8'))
+                    prompt = data.get('prompt', '')
+                    model = data.get('model', 'flux')
+                    
+                    if not prompt:
+                        raise ValueError("Prompt is required")
+                        
+                    client = Client()
+                    response = client.images.generate(
+                        model=model,
+                        prompt=prompt,
+                        response_format="url"
+                    )
+                    
+                    image_url = response.data[0].url
+                    
+                    openai_format = {
+                        "created": int(time.time()),
+                        "data": [
+                            {"url": image_url}
+                        ]
+                    }
+                    
+                    self.send_response(200)
+                    self.send_header('Content-Type', 'application/json; charset=utf-8')
+                    self.end_headers()
+                    self.wfile.write(json.dumps(openai_format, ensure_ascii=False).encode('utf-8'))
+                    
+                except Exception as e:
+                    logger.error(f"OpenAI API Image Gen error: {e}")
                     self.send_response(500)
                     self.end_headers()
                     self.wfile.write(b'{"error": "Internal Server Error"}')
