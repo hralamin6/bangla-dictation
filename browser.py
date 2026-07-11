@@ -255,8 +255,9 @@ def launch_browser(config):
                         self.end_headers()
                         
                         for chunk in response:
-                            content = chunk.choices[0].delta.content if hasattr(chunk, 'choices') and chunk.choices else None
-                            if content is not None:
+                            content_obj = chunk.choices[0].delta.content if hasattr(chunk, 'choices') and chunk.choices else None
+                            if content_obj is not None:
+                                content_str = str(content_obj)
                                 chunk_data = {
                                     "id": f"chatcmpl-{int(time.time())}",
                                     "object": "chat.completion.chunk",
@@ -265,7 +266,7 @@ def launch_browser(config):
                                     "choices": [
                                         {
                                             "index": 0,
-                                            "delta": {"content": content},
+                                            "delta": {"content": content_str},
                                             "finish_reason": None
                                         }
                                     ]
@@ -277,7 +278,8 @@ def launch_browser(config):
                         self.wfile.flush()
                         return
                     
-                    content = response.choices[0].message.content if hasattr(response, 'choices') else str(response)
+                    content_obj = response.choices[0].message.content if hasattr(response, 'choices') and response.choices else str(response)
+                    content_str = str(content_obj) if content_obj is not None else ""
                     
                     openai_format = {
                         "id": f"chatcmpl-{int(time.time())}",
@@ -288,7 +290,7 @@ def launch_browser(config):
                             "index": 0,
                             "message": {
                                 "role": "assistant",
-                                "content": content,
+                                "content": content_str,
                             },
                             "finish_reason": "stop"
                         }],
