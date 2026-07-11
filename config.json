@@ -3,5 +3,6 @@
   "language": "bn-BD",
   "fallback_clipboard": true,
   "websocket_port": 8765,
-  "auto_punctuation": false
+  "auto_punctuation": false,
+  "api_key": "sk-bangla-dictation"
 }

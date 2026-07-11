@@ -65,6 +65,29 @@ def launch_browser(config):
                 
             return process.stdout
 
+        def check_authorization(self):
+            api_key = config.get('api_key')
+            if not api_key:
+                return True # No API key configured, allow all
+                
+            auth_header = self.headers.get('Authorization')
+            if not auth_header or not auth_header.startswith('Bearer '):
+                self.send_response(401)
+                self.send_header('Content-Type', 'application/json')
+                self.end_headers()
+                self.wfile.write(b'{"error": {"message": "Missing Authentication", "type": "invalid_request_error", "param": null, "code": "invalid_api_key"}}')
+                return False
+                
+            provided_key = auth_header.split(' ')[1]
+            if provided_key != api_key:
+                self.send_response(401)
+                self.send_header('Content-Type', 'application/json')
+                self.end_headers()
+                self.wfile.write(b'{"error": {"message": "Incorrect API key provided", "type": "invalid_request_error", "param": null, "code": "invalid_api_key"}}')
+                return False
+                
+            return True
+
         def do_GET(self):
             if self.path.startswith('/tts?'):
                 from urllib.parse import urlparse, parse_qs
@@ -85,6 +108,9 @@ def launch_browser(config):
                     self.send_response(500)
                     self.end_headers()
             elif self.path == '/v1/models':
+                if not self.check_authorization():
+                    return
+                
                 import json
                 
                 # Only list models that work reliably without auth in g4f 7.8.2, plus our custom TTS/STT engines
@@ -117,6 +143,14 @@ def launch_browser(config):
                 super().do_GET()
                 
         def do_POST(self):
+            if not self.path.startswith('/v1/'):
+                self.send_response(404)
+                self.end_headers()
+                return
+                
+            if not self.check_authorization():
+                return
+                
             if self.path == '/v1/audio/speech':
                 content_length = int(self.headers['Content-Length'])
                 post_data = self.rfile.read(content_length)
