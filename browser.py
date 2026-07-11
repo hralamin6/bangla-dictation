@@ -72,9 +72,12 @@ def launch_browser(config):
             elif self.path == '/v1/models':
                 import json
                 
-                # Only list models that work reliably without auth in g4f 7.8.2
+                # Only list models that work reliably without auth in g4f 7.8.2, plus our custom TTS/STT engines
                 models = [
-                    "gpt-4o", "gpt-4", "flux", "dall-e-3"
+                    "gpt-4o", "gpt-4",        # Chat Completions
+                    "flux", "dall-e-3",       # Image Generation
+                    "tts-1", "tts-1-hd",      # Text-To-Speech (Edge TTS)
+                    "whisper-1"               # Speech-To-Text (Google/Cloud)
                 ]
                 
                 providers = [
