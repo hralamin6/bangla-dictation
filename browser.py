@@ -259,11 +259,41 @@ def launch_browser(config):
                     provider_name = data.get('provider', None)
                     messages = data.get('messages', [])
                     
+                    # Handle Multimodality (Vision)
+                    image_bytes = None
+                    for message in messages:
+                        if isinstance(message.get('content'), list):
+                            text_content = ""
+                            for item in message['content']:
+                                if item.get('type') == 'text':
+                                    text_content += item.get('text', '') + "\n"
+                                elif item.get('type') == 'image_url':
+                                    url = item.get('image_url', {}).get('url', '')
+                                    if url.startswith('data:image'):
+                                        import base64
+                                        b64_data = url.split(',')[1]
+                                        image_bytes = base64.b64decode(b64_data)
+                                    elif url.startswith('http'):
+                                        import urllib.request
+                                        req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
+                                        with urllib.request.urlopen(req) as res:
+                                            image_bytes = res.read()
+                            message['content'] = text_content.strip()
+                    
                     client = Client()
                     kwargs = {"model": model, "messages": messages}
+                    if image_bytes:
+                        kwargs["image"] = image_bytes
+                        if not provider_name:
+                            provider_name = "PollinationsAI"
+                        
                     if provider_name:
                         import g4f
                         from g4f.Provider import ProviderUtils
+                        
+                        if provider_name.lower() == "pollinationsai":
+                            kwargs["model"] = "openai"
+                            
                         provider_class = None
                         # Case-insensitive provider search using g4f's internal map
                         for name in ProviderUtils.convert.keys():
