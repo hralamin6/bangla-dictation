@@ -5,17 +5,24 @@ from evdev import UInput, ecodes
 
 logger = logging.getLogger(__name__)
 
-# Initialize the virtual keyboard with specific key capabilities
-try:
-    capabilities = {
-        ecodes.EV_KEY: [ecodes.KEY_LEFTCTRL, ecodes.KEY_V]
-    }
-    ui = UInput(capabilities, name="bangla-dictation-virtual-kbd")
-    import time
-    time.sleep(0.5) # Give Wayland time to register the new virtual device
-except Exception as e:
-    logger.error(f"Failed to create virtual keyboard: {e}")
-    ui = None
+ui = None
+_ui_initialized = False
+
+def get_ui():
+    global ui, _ui_initialized
+    if not _ui_initialized:
+        _ui_initialized = True
+        try:
+            capabilities = {
+                ecodes.EV_KEY: [ecodes.KEY_LEFTCTRL, ecodes.KEY_V]
+            }
+            ui = UInput(capabilities, name="bangla-dictation-virtual-kbd")
+            import time
+            time.sleep(0.5) # Give Wayland time to register the new virtual device
+        except Exception as e:
+            logger.error(f"Failed to create virtual keyboard: {e}")
+            ui = None
+    return ui
 
 async def type_text_async(text: str):
     await asyncio.to_thread(type_text, text)
@@ -42,7 +49,8 @@ def type_text(text: str):
 
         logger.info("Text contains Unicode (Bangla). Falling back to Wayland Clipboard injection...")
         
-        if ui is None:
+        current_ui = get_ui()
+        if current_ui is None:
             logger.error("Virtual keyboard not initialized. Cannot paste.")
             return
             
@@ -55,23 +63,23 @@ def type_text(text: str):
         time.sleep(0.1)
         
         # Press Ctrl
-        ui.write(ecodes.EV_KEY, ecodes.KEY_LEFTCTRL, 1)
-        ui.syn()
+        current_ui.write(ecodes.EV_KEY, ecodes.KEY_LEFTCTRL, 1)
+        current_ui.syn()
         time.sleep(0.02)
         
         # Press V
-        ui.write(ecodes.EV_KEY, ecodes.KEY_V, 1)
-        ui.syn()
+        current_ui.write(ecodes.EV_KEY, ecodes.KEY_V, 1)
+        current_ui.syn()
         time.sleep(0.02)
         
         # Release V
-        ui.write(ecodes.EV_KEY, ecodes.KEY_V, 0)
-        ui.syn()
+        current_ui.write(ecodes.EV_KEY, ecodes.KEY_V, 0)
+        current_ui.syn()
         time.sleep(0.02)
         
         # Release Ctrl
-        ui.write(ecodes.EV_KEY, ecodes.KEY_LEFTCTRL, 0)
-        ui.syn()
+        current_ui.write(ecodes.EV_KEY, ecodes.KEY_LEFTCTRL, 0)
+        current_ui.syn()
         time.sleep(0.02)
         
         # Restore clipboard safely
