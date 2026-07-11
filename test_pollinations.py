@@ -1,5 +1,5 @@
-import json
 import urllib.request
+import json
 import base64
 
 tiny_png = b'\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01\x08\x06\x00\x00\x00\x1f\x15\xc4\x89\x00\x00\x00\rIDATx\x9cc\xf8\xff\xff\xff\x00\x05\xfe\x02\xfe\xa7\x35\x81\x84\x00\x00\x00\x00IEND\xaeB`\x82'
@@ -19,15 +19,12 @@ payload = {
 }
 
 req = urllib.request.Request(
-    'http://localhost:8767/v1/chat/completions',
+    'https://text.pollinations.ai/openai',
     data=json.dumps(payload).encode('utf-8'),
-    headers={
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer sk-bangla-dictation'
-    }
+    headers={'Content-Type': 'application/json'}
 )
 try:
-    with urllib.request.urlopen(req) as response:
-        print(response.read().decode('utf-8'))
+    with urllib.request.urlopen(req) as res:
+        print(res.read().decode('utf-8'))
 except Exception as e:
     print(e.read().decode('utf-8') if hasattr(e, 'read') else str(e))
